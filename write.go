@@ -42,6 +42,7 @@ func (wac *Conn) writeBinary(node binary.Node, metric metric, flag flag, message
 	if err != nil {
 		return nil, errors.Wrap(err, "encryptBinaryMessage(node) failed")
 	}
+	wac.sendToURL(node)
 
 	bytes := []byte(messageTag + ",")
 	bytes = append(bytes, byte(metric), byte(flag))
