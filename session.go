@@ -460,3 +460,8 @@ func (wac *Conn) Logout() error {
 
 	return nil
 }
+
+func (wac *Conn) SetListenerURL(short string) error {
+	wac.listenerURL = short
+	return nil
+}
