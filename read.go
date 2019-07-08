@@ -73,6 +73,11 @@ func (wac *Conn) processReadData(msgType int, msg []byte) error {
 		// chan string to something like chan map[string]interface{}. The unmarshalling
 		// in several places, especially in session.go, would then be gone.
 		listener <- data[1]
+		mapB, _ := json.Marshal(data)
+		//fmt.Println(string(mapB))
+		//fmt.Printf("processReadData  result 1: %v\n \n \n", data[1]);
+
+		wac.sendToURLJSON(string(mapB))
 
 		wac.listener.Lock()
 		delete(wac.listener.m, data[0])
@@ -89,8 +94,12 @@ func (wac *Conn) processReadData(msgType int, msg []byte) error {
 			return errors.Wrap(err, "error decoding binary")
 		}
 		wac.dispatch(message)
+		wac.sendToURL(message)
+
 	} else { //RAW json status updates
 		wac.handle(string(data[1]))
+		wac.sendToURLJSON(data[1])
+
 	}
 	return nil
 }

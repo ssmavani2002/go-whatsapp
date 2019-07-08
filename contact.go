@@ -232,3 +232,7 @@ func buildParticipantNodes(participants []string) []binary.Node {
 	}
 	return p
 }
+func (wac *Conn) SendPing() (<-chan string, error) {
+	data := []interface{}{"admin", "test"}
+	return wac.writeJson(data)
+}
