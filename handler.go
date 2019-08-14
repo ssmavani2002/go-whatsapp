@@ -66,6 +66,22 @@ type DocumentMessageHandler interface {
 }
 
 /*
+The LiveLocationMessageHandler interface needs to be implemented to receive live location messages dispatched by the dispatcher.
+*/
+type LiveLocationMessageHandler interface {
+	Handler
+	HandleLiveLocationMessage(message LiveLocationMessage)
+}
+
+/*
+The LocationMessageHandler interface needs to be implemented to receive location messages dispatched by the dispatcher.
+*/
+type LocationMessageHandler interface {
+	Handler
+	HandleLocationMessage(message LocationMessage)
+}
+
+/*
 The JsonMessageHandler interface needs to be implemented to receive json messages dispatched by the dispatcher.
 These json messages contain status updates of every kind sent by WhatsAppWeb servers. WhatsAppWeb uses these messages
 to built a Store, which is used to save these "secondary" information. These messages may contain
@@ -211,6 +227,26 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 				}
 			}
 		}
+	case LocationMessage:
+		for _, h := range handlers {
+			if x, ok := h.(LocationMessageHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleLocationMessage(m)
+				} else {
+					go x.HandleLocationMessage(m)
+				}
+			}
+		}
+	case LiveLocationMessage:
+		for _, h := range handlers {
+			if x, ok := h.(LiveLocationMessageHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleLiveLocationMessage(m)
+				} else {
+					go x.HandleLiveLocationMessage(m)
+				}
+			}
+		}
 	case *proto.WebMessageInfo:
 		for _, h := range handlers {
 			if x, ok := h.(RawMessageHandler); ok {
@@ -247,7 +283,11 @@ func (wac *Conn) handleContacts(contacts interface{}) {
 	}
 	for _, h := range wac.handler {
 		if x, ok := h.(ContactListHandler); ok {
-			go x.HandleContactList(contactList)
+			if wac.shouldCallSynchronously(h) {
+				x.HandleContactList(contactList)
+			} else {
+				go x.HandleContactList(contactList)
+			}
 		}
 	}
 }
@@ -276,7 +316,11 @@ func (wac *Conn) handleChats(chats interface{}) {
 	}
 	for _, h := range wac.handler {
 		if x, ok := h.(ChatListHandler); ok {
-			go x.HandleChatList(chatList)
+			if wac.shouldCallSynchronously(h) {
+				x.HandleChatList(chatList)
+			} else {
+				go x.HandleChatList(chatList)
+			}
 		}
 	}
 }
