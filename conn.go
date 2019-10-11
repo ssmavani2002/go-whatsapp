@@ -2,17 +2,14 @@
 package whatsapp
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/pkg/errors"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"strings"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 type metric byte
@@ -91,10 +88,11 @@ type Conn struct {
 	Store          *Store
 	ServerLastSeen time.Time
 
-	longClientName   string
-	shortClientName  string
-	listenerURL      string
+	longClientName  string
+	shortClientName string
+
 	loginSessionLock sync.RWMutex
+	Proxy            func(*http.Request) (*url.URL, error)
 }
 
 type websocketWrapper struct {
@@ -119,8 +117,23 @@ func NewConn(timeout time.Duration) (*Conn, error) {
 		msgTimeout: timeout,
 		Store:      newStore(),
 
-		longClientName:  "Google Chrome",
-		shortClientName: "chrome",
+		longClientName:  "github.com/rhymen/go-whatsapp",
+		shortClientName: "go-whatsapp",
+	}
+	return wac, wac.connect()
+}
+
+// NewConnWithProxy Create a new connect with a given timeout and a http proxy.
+func NewConnWithProxy(timeout time.Duration, proxy func(*http.Request) (*url.URL, error)) (*Conn, error) {
+	wac := &Conn{
+		handler:    make([]Handler, 0),
+		msgCount:   0,
+		msgTimeout: timeout,
+		Store:      newStore(),
+
+		longClientName:  "github.com/rhymen/go-whatsapp",
+		shortClientName: "go-whatsapp",
+		Proxy:           proxy,
 	}
 	return wac, wac.connect()
 }
@@ -141,6 +154,7 @@ func (wac *Conn) connect() (err error) {
 		ReadBufferSize:   25 * 1024 * 1024,
 		WriteBufferSize:  10 * 1024 * 1024,
 		HandshakeTimeout: wac.msgTimeout,
+		Proxy:            wac.Proxy,
 	}
 
 	headers := http.Header{"Origin": []string{"https://web.whatsapp.com"}}
@@ -226,76 +240,4 @@ func (wac *Conn) keepAlive(minIntervalMs int, maxIntervalMs int) {
 			return
 		}
 	}
-}
-func (wac *Conn) sendToURL(msg interface{}) {
-	fmt.Printf("data get send URL: %v\n \n \n", msg)
-
-	url := wac.listenerURL + "/whatsappEvent"
-	e, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Println(err)
-
-	}
-
-	fmt.Println(string(e))
-
-	fmt.Printf("data URL from this number: %v\n \n \n", wac.session.Wid)
-
-	payload := strings.NewReader(string(e))
-
-	req, err := http.NewRequest("POST", url, payload)
-	if err != nil {
-		fmt.Printf("server not responding %s", err.Error())
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("token", wac.session.Wid)
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("server not responding %s", err.Error())
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-
-	fmt.Println(res)
-	fmt.Println(string(body))
-}
-func (wac *Conn) sendToURLJSON(msg string) {
-
-	if wac.session != nil && wac.session.Wid != "" {
-		fmt.Printf("data get send URL JSON: %v\n \n \n", msg)
-
-		//	url := "http://192.168.11.144:2012/whatsappEvent"
-
-		url := wac.listenerURL + "/whatsappEvent"
-		fmt.Printf("data URL from this number: %v\n \n \n", wac.session.Wid)
-
-		payload := strings.NewReader(string(msg))
-
-		req, err := http.NewRequest("POST", url, payload)
-		if err != nil {
-			fmt.Printf("server not responding %s", err.Error())
-		}
-
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("token", wac.session.Wid)
-
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			fmt.Printf("server not responding %s", err.Error())
-		}
-
-		defer res.Body.Close()
-		body, err := ioutil.ReadAll(res.Body)
-
-		fmt.Println(res)
-		fmt.Println(string(body))
-	}
-
-}
-
-func (wac *Conn) GetConnectedStatus() bool {
-	return wac.connected
 }
