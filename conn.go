@@ -2,9 +2,13 @@
 package whatsapp
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -118,8 +122,8 @@ func NewConn(timeout time.Duration) (*Conn, error) {
 		msgTimeout: timeout,
 		Store:      newStore(),
 
-		longClientName:  "github.com/rhymen/go-whatsapp",
-		shortClientName: "go-whatsapp",
+		longClientName:  "Google Chrome",
+		shortClientName: "chrome",
 	}
 	return wac, wac.connect()
 }
@@ -132,8 +136,8 @@ func NewConnWithProxy(timeout time.Duration, proxy func(*http.Request) (*url.URL
 		msgTimeout: timeout,
 		Store:      newStore(),
 
-		longClientName:  "github.com/rhymen/go-whatsapp",
-		shortClientName: "go-whatsapp",
+		longClientName:  "Google Chrome",
+		shortClientName: "chrome",
 		Proxy:           proxy,
 	}
 	return wac, wac.connect()
